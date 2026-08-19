@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AssetTrack</title>
+</head>
+<body>
+
+<select id="item-select">
+    <option value="1" data-price="12.50">Widget A</option>
+    <option value="2" data-price="7.25">Widget B</option>
+</select>
+
+<input id="qty" type="number" value="1" min="0" step="0.01">
+
+<div id="total"></div>
+<div id="item-note"></div>
+
+<script>
+const select = document.getElementById('item-select');
+const qty = document.getElementById('qty');
+const total = document.getElementById('total');
+const note = document.getElementById('item-note');
+
+let controller;
+
+function updateTotal() {
+    const price = Number(select.options[select.selectedIndex].dataset.price);
+    const quantity = Number(qty.value);
+
+    if (!Number.isFinite(price) || !Number.isFinite(quantity)) {
+        total.textContent = 'Total: $0.00';
+        return;
+    }
+
+    total.textContent = 'Total: $' + (price * quantity).toFixed(2);
+}
+
+async function getNote() {
+    if (controller) {
+        controller.abort();
+    }
+
+    controller = new AbortController();
+
+    try {
+        const response = await fetch(
+            '/api/item-note?id=' + encodeURIComponent(select.value),
+            { signal: controller.signal }
+        );
+
+        if (!response.ok) {
+            throw new Error();
+        }
+
+        const data = await response.json();
+        note.textContent = data.note ?? '';
+
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            note.textContent = 'Unable to load item note.';
+        }
+    }
+}
+
+select.addEventListener('change', function() {
+    updateTotal();
+    getNote();
+});
+
+qty.addEventListener('input', updateTotal);
+
+updateTotal();
+getNote();
+</script>
+
+</body>
+</html>
